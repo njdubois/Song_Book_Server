@@ -1,5 +1,6 @@
 var http = require('http');
 var tracks = require("./trackDetailsJson")
+var url = require('url');
 const qs = require('querystring');
 const { parse } = require('querystring');
 
@@ -28,14 +29,14 @@ loadSetListFile();
 
 let homeIndex = (response, body) => {
     let responseData = JSON.stringify(body, null, 3);
-    sendResponse(response, 200, responseData)
+    sendResponse(response, 200, responseData);
     return true;
 };
 
 let getSetList = (response, body) => {
-    let setListName = parse(body)['setListName'];
-    console.log("\n\n", setListName, "\n\n");
-    let responseData = JSON.stringify(setListName, null, 3);
+    let setListName = body.body.setListName;
+
+    let responseData = JSON.stringify(setLists[setListName], null, 3);
 
     sendResponse(response, 200, responseData);
 
@@ -43,10 +44,7 @@ let getSetList = (response, body) => {
 };
 
 let getSetListNames = (response, body) => {
-
-    // let setListName = body['setListName'];
-    let setListNames = "TODO";
-    let responseData = JSON.stringify(setListNames, null, 3);
+    let responseData = JSON.stringify(Object.keys(setLists), null, 3);
     sendResponse(response, 200, responseData);
 
     return true;
@@ -93,17 +91,21 @@ http.createServer(function(request, response){
 
 
     if (request.method == 'POST') {
-    	request.on('data', chunk => {
-            body += chunk.toString();
-        });
-
         if (postRoutes.hasOwnProperty(incomingUrl)) {
+
+            request.on('data', chunk => {
+                body += chunk.toString();
+            });
+
             postRoutes[incomingUrl](response, {"body": body, "routes": {"postRoutes": postRoutes, "getRoutes": getRoutes }});
         }
     }
     else if (request.method == 'GET') {
         if (getRoutes.hasOwnProperty(incomingUrl)) {
-            getRoutes[incomingUrl](response, {"body": body, "routes": {"postRoutes": incomingUrl, "getRoutes": getRoutes}});
+
+            let query = url.parse(request.url,true).query;
+
+            getRoutes[incomingUrl](response, {"body": query, "routes": {"postRoutes": incomingUrl, "getRoutes": getRoutes}});
         }
     }
     else {
