@@ -1,0 +1,21 @@
+[
+  {
+    "artistName": "",
+    "artistNameSlug": "",
+    "dateAdded":"",
+    "songList": [
+      {
+        "songNameSlug":"",
+        "songName": "",
+        "fromAlbum":"",
+        "dateAdded": "",
+        "notes": "",
+        "pages": [
+          "",
+          "",
+          ""
+        ]
+      }
+    ]
+  }
+]

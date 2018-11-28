@@ -3,29 +3,29 @@ var tracks = require("./trackDetailsJson")
 var url = require('url');
 const qs = require('querystring');
 const { parse } = require('querystring');
+var moment = require('moment');
+var _ = require('underscore');
 
 const fs = require('fs');
 
 let setLists;
 let setListNames = [];
 
+let songList = [];
+
 function loadSetListFile() {
     setLists = JSON.parse(fs.readFileSync('setlists.json', 'utf8'));
 
     for( let aSetListName in setLists ) {
     	let aSetList = setLists[aSetListName];
-
     	setListNames.push(aSetListName);
-    	//console.log("\n\n\n\n");
-    	//console.log(aSetListName);
 	}
-
 }
 loadSetListFile();
 
 // ***************************************************************************************************************
 
-// Route Functions :
+// ** GET Route Functions :
 
 let homeIndex = (response, body) => {
     let responseData = JSON.stringify(body, null, 3);
@@ -50,13 +50,6 @@ let getSetListNames = (response, body) => {
     return true;
 };
 
-let saveList = (response, body) => {
-    let responseData = JSON.stringify(body, null, 3);
-    sendResponse(response, 200, responseData);
-
-    return true;
-};
-
 let getWholeList = (response, body) => {
     let responseData = JSON.stringify(setLists, null, 3);
     sendResponse(response, 200, responseData);
@@ -64,12 +57,77 @@ let getWholeList = (response, body) => {
     return true;
 };
 
+// ** POST Route Functions :
+
+let createList = (response, data) => {
+
+    console.log("body in createList", data);
+
+    let responseData = JSON.stringify(data.body, null, 3);
+    sendResponse(response, 200, responseData);
+
+    return true;
+};
+
+let saveList = (response, body) => {
+    let responseData = JSON.stringify(body, null, 3);
+    sendResponse(response, 200, responseData);
+
+    return true;
+};
+
+let saveSong = (response, data) => {
+
+    let artistNameSlug = data.body.artistName.toLowerCase().replace(/ /g, '_');
+
+    let songJson = {
+     //   "artistName": data.body.artistName,
+        "songNameSlug": data.body.songName.toLowerCase().replace(/ /g, '_'),
+        "songName": data.body.songName,
+        "fromAlbum": data.body.fromAlbum,
+        "dateAdded": moment().format(),
+        "notes": data.body.notes,
+        "pages": JSON.parse(data.body.pageList)
+    };
+
+    // Does the artist exist?
+
+    //songList
+    let artistData = _.where(songList, {"artistNameSlug": artistNameSlug});
+
+    let newArtistJson = {};
+
+    if ( artistData.length > 0 ) {
+        // artist exists
+        newArtistJson = {"artist exists!": true};
+    } else {
+        // artist does not exist.
+
+        newArtistJson = {
+            "artistName": data.body.artistName,
+            "artistNameSlug": artistNameSlug,
+            "dateAdded":moment().format(),
+            "songList": [
+                songJson
+            ]
+        };
+    }
+
+    let responseData = JSON.stringify(newArtistJson);
+    sendResponse(response, 200, responseData);
+
+    return true;
+};
+
+
 // ***************************************************************************************************************
 
 // Route Definitions :
 
 const postRoutes = {
     "/saveList": saveList,
+    "/createList": createList,
+    "/song/save": saveSong
 };
 
 const getRoutes = {
@@ -85,27 +143,45 @@ const getRoutes = {
 // Web Server :
 
 http.createServer(function(request, response){
-    let body = null;
+
 
     let incomingUrl = request.url.split("?")[0];
 
+    var callback = () => {return true;};
+
+    let body = [];
+
+    request.on('data', (chunk) => {
+        body.push(chunk);
+    }).on('end', () => {
+
+        body = Buffer.concat(body).toString();
+
+
+        var queryStr = body,
+            queryArr = queryStr.split('&'),
+            queryParams = {};
+
+        for (var q = 0, qArrLength = queryArr.length; q < qArrLength; q++) {
+            var qArr = queryArr[q].split('=');
+            queryParams[qArr[0]] = decodeURIComponent(qArr[1]);
+        }
+
+        callback(response, {"body": queryParams});
+
+    });
 
     if (request.method == 'POST') {
+
         if (postRoutes.hasOwnProperty(incomingUrl)) {
-
-            request.on('data', chunk => {
-                body += chunk.toString();
-            });
-
-            postRoutes[incomingUrl](response, {"body": body, "routes": {"postRoutes": postRoutes, "getRoutes": getRoutes }});
+            callback = postRoutes[incomingUrl];
         }
     }
     else if (request.method == 'GET') {
         if (getRoutes.hasOwnProperty(incomingUrl)) {
-
             let query = url.parse(request.url,true).query;
 
-            getRoutes[incomingUrl](response, {"body": query, "routes": {"postRoutes": incomingUrl, "getRoutes": getRoutes}});
+            getRoutes[incomingUrl](response, {"body": query});
         }
     }
     else {
