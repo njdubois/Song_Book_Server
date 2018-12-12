@@ -1,19 +1,19 @@
 [
   {
-    "setListName": "",
-    "dateAdded": "",
-    "trackList": [
+    "artistName": "The Beatles",
+    "artistNameSlug": "the_beatles",
+    "dateAdded": "2018-12-12T08:33:03-06:00",
+    "songList": [
       {
-        "number": 1,
-        "artistName": "",
-        "songNameSlug": "",
-        "dateAdded": ""
-      },
-      {
-        "number": 2,
-        "artistName": "",
-        "songNameSlug": "",
-        "dateAdded": ""
+        "songNameSlug": "love_me_do",
+        "songName": "Love Me Do",
+        "fromAlbum": "Please Please Me",
+        "dateAdded": "2018-12-12T08:33:03-06:00",
+        "notes": "great song!\nhow about the beatles huh?",
+        "pages": {
+          "1": "love_me_do_1.jpg",
+          "2": "love_me_do_2.jpg"
+        }
       }
     ]
   }

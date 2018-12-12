@@ -11,7 +11,7 @@ const fs = require('fs');
 let setLists;
 let setListNames = [];
 
-let songList = [];
+let songList = JSON.parse(fs.readFileSync('JSON/SetLists.JSON', 'utf8'));
 
 function loadSetListFile() {
     setLists = JSON.parse(fs.readFileSync('setlists.json', 'utf8'));
@@ -78,11 +78,11 @@ let saveList = (response, body) => {
 
 let saveSong = (response, data) => {
 
-    let artistNameSlug = data.body.artistName.toLowerCase().replace(/ /g, '_');
+    let artistNameSlug = createSlug(data.body.artistName);
+    let songNameSlug = createSlug(data.body.songName);
 
     let songJson = {
-     //   "artistName": data.body.artistName,
-        "songNameSlug": data.body.songName.toLowerCase().replace(/ /g, '_'),
+        "songNameSlug": songNameSlug,
         "songName": data.body.songName,
         "fromAlbum": data.body.fromAlbum,
         "dateAdded": moment().format(),
@@ -92,14 +92,48 @@ let saveSong = (response, data) => {
 
     // Does the artist exist?
 
-    //songList
+    // Get Artist details and song list if there is any.
     let artistData = _.where(songList, {"artistNameSlug": artistNameSlug});
 
     let newArtistJson = {};
 
+
+
     if ( artistData.length > 0 ) {
         // artist exists
-        newArtistJson = {"artist exists!": true};
+
+        // does the song?
+
+
+        // Get this artists song list if there is one.
+        let artistSongData = _.where(artistData[0].songList, {"songNameSlug": songNameSlug});
+
+        if ( artistSongData.length > 0 ) {
+            let responseData = JSON.stringify({"artist exists, Song Exists!": true});
+            sendResponse(response, 200, responseData);
+
+            return true;
+        } else {
+            var index = -1;
+            _.each(songList, function(data, idx) {
+                if (_.isEqual(data, artistData[0])) {
+                    index = idx;
+                    return;
+                }
+            });
+
+            if (index > -1) {
+                songList[index].songList.push(songJson);
+            } else {
+
+                let responseData = JSON.stringify({"artist exists, Song does NOT! Could not add!!": true});
+                sendResponse(response, 200, responseData);
+
+                return true;
+
+            }
+        }
+
     } else {
         // artist does not exist.
 
@@ -108,15 +142,27 @@ let saveSong = (response, data) => {
             "artistNameSlug": artistNameSlug,
             "dateAdded":moment().format(),
             "songList": [
-                songJson
+                //songJson
             ]
         };
+
+        newArtistJson.songList.push(songJson);
+        songList.push(newArtistJson);
     }
 
-    let responseData = JSON.stringify(newArtistJson);
+    let responseData = JSON.stringify(songList);
+
+    saveJson(responseData);
     sendResponse(response, 200, responseData);
 
     return true;
+};
+
+
+// ***************************************************************************************************************
+
+saveJson = (jsonToSave) => {
+    fs.writeFile('JSON/SetLists.JSON', jsonToSave, 'utf8');
 };
 
 
@@ -198,4 +244,8 @@ sendResponse = (response, responseCode, responseJson) => {
     response.end( );
 
     return true;
+};
+
+createSlug = (inputString) => {
+    return inputString.toLowerCase().replace(/ /g, '_');
 };
